@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>漢検4級クエスト — 科学的ゲーミング学習</title>
+<style>
+  :root{
+    --bg:#0d1022; --panel:#191f3a; --panel2:#232b4e; --line:#313c6b;
+    --text:#eef1fb; --sub:#9aa5c9;
+    --gold:#ffd166; --ok:#3ecf8e; --ng:#f7616f; --crit:#ff9f43;
+    --accent1:#5b7cfa; --accent2:#a45bfa;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{
+    font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -100px,#1c2450,var(--bg));
+    color:var(--text); min-height:100vh;
+  }
+  #app{max-width:540px;margin:0 auto;padding:16px 16px 96px;}
+  h1{font-size:21px} h2{font-size:17px;margin-bottom:10px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;}
+  .row{display:flex;align-items:center;gap:10px}
+  .grow{flex:1}
+  .sub{color:var(--sub);font-size:13px;line-height:1.7}
+  .big{font-size:26px;font-weight:800}
+  .gold{color:var(--gold)}
+  button{font-family:inherit;border:none;border-radius:14px;cursor:pointer;font-size:16px;font-weight:700;color:var(--text);}
+  .btn-main{width:100%;padding:16px;background:linear-gradient(135deg,var(--accent1),var(--accent2));
+    box-shadow:0 6px 20px rgba(90,110,250,.35);margin-top:8px;}
+  .btn-main:active{transform:scale(.98)}
+  .btn-boss{background:linear-gradient(135deg,#f75f6d,#a43bcf);box-shadow:0 6px 20px rgba(230,70,120,.35)}
+  .btn-sub{width:100%;padding:13px;background:var(--panel2);border:1px solid var(--line);margin-top:8px;}
+  .btn-ghost{background:none;color:var(--sub);font-size:14px;padding:8px;font-weight:600}
+  .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:var(--panel2);border:1px solid var(--line)}
+  .xpbar{height:12px;background:#0a0d1c;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+  .xpbar>div{height:100%;background:linear-gradient(90deg,#ffd166,#ff9f43);transition:width .5s}
+  .mbar{height:8px;background:#0a0d1c;border-radius:99px;overflow:hidden}
+  .mbar>div{height:100%;background:linear-gradient(90deg,#3ecf8e,#4f8ef7);transition:width .5s}
+  /* battle */
+  .enemy-zone{text-align:center;padding:8px 0 4px}
+  .enemy-emoji{font-size:64px;display:inline-block;transition:transform .15s;filter:drop-shadow(0 4px 12px rgba(0,0,0,.5))}
+  .enemy-emoji.hit{transform:scale(.82) rotate(-8deg);filter:drop-shadow(0 0 14px rgba(255,209,102,.9))}
+  .enemy-emoji.attack{transform:scale(1.18) translateY(6px)}
+  .hpbar{height:14px;background:#0a0d1c;border-radius:99px;overflow:hidden;border:1px solid var(--line);margin-top:6px}
+  .hpbar>div{height:100%;background:linear-gradient(90deg,#f75f6d,#ff9f43);transition:width .4s}
+  .hearts{font-size:20px;letter-spacing:2px}
+  .combo{font-weight:900;color:var(--crit);font-size:15px;min-height:20px;text-align:center}
+  .dmg{position:absolute;font-weight:900;font-size:26px;color:var(--gold);pointer-events:none;
+    animation:dmgfly .8s forwards;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+  @keyframes dmgfly{0%{opacity:0;transform:translateY(10px) scale(.6)}25%{opacity:1;transform:translateY(-6px) scale(1.15)}100%{opacity:0;transform:translateY(-42px) scale(1)}}
+  .qcat{font-size:12px;font-weight:800;color:var(--gold);letter-spacing:1px}
+  .qtext{font-size:19px;font-weight:700;line-height:1.8;margin:10px 0 16px}
+  .qtext .tgt{color:var(--gold);border-bottom:2px solid var(--gold);padding:0 2px}
+  .choice{display:block;width:100%;text-align:left;padding:14px 16px;margin-bottom:10px;
+    background:var(--panel2);border:2px solid var(--line);border-radius:14px;font-size:17px;font-weight:600;line-height:1.5;}
+  .choice:active{transform:scale(.99)}
+  .choice.correct{border-color:var(--ok);background:rgba(62,207,142,.15)}
+  .choice.wrong{border-color:var(--ng);background:rgba(247,97,111,.15)}
+  .choice.dim{opacity:.4}
+  .feedback{border-radius:14px;padding:14px;margin-top:4px;font-size:14px;line-height:1.8;animation:pop .25s}
+  .feedback.ok{background:rgba(62,207,142,.12);border:1px solid var(--ok)}
+  .feedback.ng{background:rgba(247,97,111,.12);border:1px solid var(--ng)}
+  @keyframes pop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+  .progress{height:10px;background:#0a0d1c;border-radius:99px;overflow:hidden;margin:8px 0 4px}
+  .progress>div{height:100%;background:linear-gradient(90deg,#3ecf8e,#4f8ef7);transition:width .3s}
+  input[type=text]{width:100%;padding:14px;border-radius:14px;border:2px solid var(--line);
+    background:var(--panel2);color:var(--text);font-size:18px;font-weight:700;font-family:inherit;margin-bottom:10px}
+  input[type=text]:focus{outline:none;border-color:var(--accent1)}
+  nav{position:fixed;bottom:0;left:0;right:0;background:rgba(13,16,34,.95);border-top:1px solid var(--line);backdrop-filter:blur(8px);z-index:10;}
+  nav .inner{max-width:540px;margin:0 auto;display:flex}
+  nav button{flex:1;background:none;padding:10px 4px 14px;font-size:11px;color:var(--sub);font-weight:600}
+  nav button.active{color:var(--gold)}
+  nav .ico{display:block;font-size:20px;margin-bottom:2px}
+  .badge{display:flex;gap:12px;align-items:center;background:var(--panel2);border:1px solid var(--line);
+    border-radius:14px;padding:12px;margin-bottom:10px;}
+  .badge.locked{opacity:.38;filter:grayscale(1)}
+  .badge .bemoji{font-size:30px}
+  .cat-btn{display:flex;align-items:center;gap:10px;width:100%;padding:13px 14px;margin-bottom:8px;
+    background:var(--panel2);border:1px solid var(--line);border-radius:12px;text-align:left;font-size:15px;font-weight:700}
+  .streak-flame{font-size:34px;filter:drop-shadow(0 0 8px rgba(255,160,60,.6))}
+  .timer{font-weight:900;font-size:18px;color:var(--gold)}
+  .timer.warn{color:var(--ng);animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.4}}
+  .levelup{position:fixed;inset:0;background:rgba(10,12,28,.88);z-index:50;display:flex;
+    align-items:center;justify-content:center;flex-direction:column;animation:pop .3s}
+  .levelup .lv{font-size:56px;font-weight:900;color:var(--gold);text-shadow:0 0 30px rgba(255,209,102,.8)}
+  .science{border-left:3px solid var(--ok);padding-left:12px;margin-bottom:14px}
+  .science b{color:var(--gold)}
+  table.result{width:100%;border-collapse:collapse;font-size:13px}
+  table.result td{padding:8px 4px;border-bottom:1px solid var(--line);line-height:1.6;vertical-align:top}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<nav><div class="inner" id="navbar"></div></nav>
+
+<script>
+"use strict";
+/* ============================================================
+   漢検4級クエスト
+   科学的根拠のある学習法をゲームに組み込んだ漢検4級対策アプリ
+   ・想起練習(テスト効果): 全問クイズ形式 / 読みは入力モードあり
+   ・間隔反復(分散学習): ライトナー式 1→3→7→14日で自動復習
+   ・交互練習: 「今日の特訓」は9分野をシャッフル出題
+   ・即時フィードバック: 全問に解説つき
+   ============================================================ */
+
+/* ---------- 出題分野(実際の漢検4級の大問構成に対応) ---------- */
+const CATS = [
+  {id:"yomi",  label:"漢字の読み",     emoji:"📖", weight:4},
+  {id:"kaki",  label:"書き取り",       emoji:"✍️", weight:3},
+  {id:"douon", label:"同音・同訓異字", emoji:"👂", weight:3},
+  {id:"bushu", label:"部首",           emoji:"🧩", weight:2},
+  {id:"kousei",label:"熟語の構成",     emoji:"🏗️", weight:2},
+  {id:"taigi", label:"対義語・類義語", emoji:"⚖️", weight:2},
+  {id:"okuri", label:"送りがな",       emoji:"🎯", weight:1},
+  {id:"yoji",  label:"四字熟語",       emoji:"🀄", weight:2},
+  {id:"goji",  label:"誤字訂正",       emoji:"🔍", weight:1},
+];
+
+/* ---------- 問題データ ----------
+   q: 問題文(【】が対象語) / c: 選択肢 / a: 正解のindex / exp: 解説
+   yomi は input:true (入力モード対応。かんたんモードでは4択) ---------- */
+const QUESTIONS = [
+/* ===== 読み ===== */
+{cat:"yomi", q:"【濃霧】で視界が悪い。", input:true, ans:"のうむ", c:["のうむ","のうきり","もうむ","こいむ"], a:0, exp:"濃霧(のうむ)=濃い霧。「濃」は4級の漢字。"},
+{cat:"yomi", q:"証拠品を【押収】する。", input:true, ans:"おうしゅう", c:["おうしゅう","おしゅう","こうしゅう","あっしゅう"], a:0, exp:"押収(おうしゅう)=証拠品などを取り上げること。"},
+{cat:"yomi", q:"新入生を【歓迎】する。", input:true, ans:"かんげい", c:["かんげい","がんげい","けいげい","かんむかえ"], a:0, exp:"歓迎(かんげい)=喜んで迎えること。"},
+{cat:"yomi", q:"会場が【沈黙】に包まれた。", input:true, ans:"ちんもく", c:["ちんもく","じんもく","ちんこく","しずもく"], a:0, exp:"沈黙(ちんもく)=黙りこむこと。「沈」も「黙」も4級。"},
+{cat:"yomi", q:"自然の【驚異】に感動する。", input:true, ans:"きょうい", c:["きょうい","けいい","ぎょうい","きょうき"], a:0, exp:"驚異(きょうい)=驚くほどすばらしいこと。「脅威」との書き分けにも注意。"},
+{cat:"yomi", q:"台風の【影響】で電車が遅れた。", input:true, ans:"えいきょう", c:["えいきょう","えいこう","ようきょう","かげひび"], a:0, exp:"影響(えいきょう)。「影」も「響」も4級の頻出漢字。"},
+{cat:"yomi", q:"専門家に調査を【依頼】する。", input:true, ans:"いらい", c:["いらい","えらい","いたく","きらい"], a:0, exp:"依頼(いらい)=人に頼むこと。"},
+{cat:"yomi", q:"健康を【維持】するため毎日走る。", input:true, ans:"いじ", c:["いじ","ゆいじ","いち","たもち"], a:0, exp:"維持(いじ)=保ち続けること。"},
+{cat:"yomi", q:"【濁流】が橋を押し流した。", input:true, ans:"だくりゅう", c:["だくりゅう","にごりゅう","たくりゅう","どりゅう"], a:0, exp:"濁流(だくりゅう)=濁った激しい流れ。"},
+{cat:"yomi", q:"盛大な【拍手】が起こった。", input:true, ans:"はくしゅ", c:["はくしゅ","ひょうしゅ","はくて","ぱくしゅ"], a:0, exp:"拍手(はくしゅ)。「拍」は4級。「拍子(ひょうし)」の読みも要注意。"},
+{cat:"yomi", q:"【峠】の茶屋でひと休みする。", input:true, ans:"とうげ", c:["とうげ","みね","さか","がけ"], a:0, exp:"峠(とうげ)=山道の一番高い所。日本で作られた国字。"},
+{cat:"yomi", q:"【芝生】の上で弁当を食べる。", input:true, ans:"しばふ", c:["しばふ","しばお","さぼく","しせい"], a:0, exp:"芝生(しばふ)は特別な読み方(熟字訓)。"},
+{cat:"yomi", q:"スマートフォンが【普及】する。", input:true, ans:"ふきゅう", c:["ふきゅう","ふきょう","ほきゅう","ふっきゅう"], a:0, exp:"普及(ふきゅう)=広く行き渡ること。"},
+{cat:"yomi", q:"【脂肪】を減らす運動をする。", input:true, ans:"しぼう", c:["しぼう","しほう","あぶら","しぼー"], a:0, exp:"脂肪(しぼう)。「脂」も「肪」も4級。"},
+{cat:"yomi", q:"【突然】、雨が降り出した。", input:true, ans:"とつぜん", c:["とつぜん","とうぜん","こうぜん","くうぜん"], a:0, exp:"突然(とつぜん)=急に。「突」は4級。"},
+{cat:"yomi", q:"【舞台】に立つ夢をかなえる。", input:true, ans:"ぶたい", c:["ぶたい","まいだい","ぶだい","まいたい"], a:0, exp:"舞台(ぶたい)。「舞」は4級。部首は「舛(まいあし)」。"},
+{cat:"yomi", q:"公園の【噴水】の前で待ち合わせる。", input:true, ans:"ふんすい", c:["ふんすい","ほんすい","ばくすい","ふきみず"], a:0, exp:"噴水(ふんすい)。「噴火」「噴出」も同じ「噴」。"},
+{cat:"yomi", q:"【冒険】小説に夢中になる。", input:true, ans:"ぼうけん", c:["ぼうけん","もうけん","ぼうげん","ほうけん"], a:0, exp:"冒険(ぼうけん)=危険をおかして行うこと。"},
+{cat:"yomi", q:"【迫力】ある映像に息をのむ。", input:true, ans:"はくりょく", c:["はくりょく","ひゃくりょく","はくりき","きんりょく"], a:0, exp:"迫力(はくりょく)。「迫る(せまる)」の訓読みもセットで覚えよう。"},
+{cat:"yomi", q:"地球の【環境】を守る活動に参加する。", input:true, ans:"かんきょう", c:["かんきょう","かんけい","わっきょう","けんきょう"], a:0, exp:"環境(かんきょう)。「環」は4級。「輪」の意味を持つ。"},
+{cat:"yomi", q:"刃物を安全に【扱う】。", input:true, ans:"あつかう", c:["あつかう","あやつる","ふるう","つかう"], a:0, exp:"扱う(あつかう)。4級の訓読み頻出語。"},
+{cat:"yomi", q:"記者から【鋭い】質問が飛んだ。", input:true, ans:"するどい", c:["するどい","かしこい","はやい","にぶい"], a:0, exp:"鋭い(するどい)。対義語は「鈍い(にぶい)」。どちらも4級。"},
+{cat:"yomi", q:"大きな荷物を両手で【抱える】。", input:true, ans:"かかえる", c:["かかえる","ささえる","たずさえる","こしらえる"], a:0, exp:"抱える(かかえる)。「抱く(だく/いだく)」の読み分けも出る。"},
+{cat:"yomi", q:"川の水が【澄んで】いて底まで見える。", input:true, ans:"すんで", c:["すんで","とんで","くんで","にじんで"], a:0, exp:"澄む(すむ)=にごりがなく清らか。対義語は「濁る」。"},
+{cat:"yomi", q:"世界でも【珍しい】切手を集める。", input:true, ans:"めずらしい", c:["めずらしい","うつくしい","いちじるしい","このましい"], a:0, exp:"珍しい(めずらしい)。「珍品」「珍味」の「珍」。"},
+
+/* ===== 書き取り ===== */
+{cat:"kaki", q:"敵の城を【コウゲキ】する。", c:["攻撃","交撃","攻激","巧撃"], a:0, exp:"攻撃。「攻」は攵(ぼくづくり)ではなく工+攵。対義語は「防御」。"},
+{cat:"kaki", q:"全力で選手を【オウエン】する。", c:["応援","応縁","央援","応演"], a:0, exp:"応援。「援」は「援助」「救援」でも使う。"},
+{cat:"kaki", q:"【カンパイ】の音頭をとる。", c:["乾杯","乾配","感杯","完杯"], a:0, exp:"乾杯=杯(さかずき)を乾(ほ)すという意味。"},
+{cat:"kaki", q:"森の【オク】へと進んでいく。", c:["奥","憶","億","屋"], a:0, exp:"奥。「奥地」「奥義」でも使う。部首は「大」。"},
+{cat:"kaki", q:"台風で大きな【ヒガイ】を受けた。", c:["被害","彼害","疲害","披害"], a:0, exp:"被害。「被」「彼」「疲」は形が似ているので注意!"},
+{cat:"kaki", q:"【シンチョウ】に行動する。", c:["慎重","深重","真重","慎調"], a:0, exp:"慎重=注意深いこと。「身長」「新調」と同音なので文脈で判断。"},
+{cat:"kaki", q:"日差しが強いので【ボウシ】をかぶる。", c:["帽子","冒子","棒子","忙子"], a:0, exp:"帽子。「冒険」の冒、「棒」と混同しやすい。巾(はばへん)がつく。"},
+{cat:"kaki", q:"敵の陣地を【ホウイ】する。", c:["包囲","抱囲","砲囲","方囲"], a:0, exp:"包囲=まわりを取り囲むこと。「抱」(かかえる)との書き分けに注意。"},
+{cat:"kaki", q:"強敵に【イド】む。", c:["挑む","跳む","逃む","桃む"], a:0, exp:"挑む(いどむ)。「挑戦」の挑。「跳」「逃」「桃」は同じ「兆」を持つ仲間。"},
+{cat:"kaki", q:"ゴールまでの【キョリ】を測る。", c:["距離","巨離","距理","拠離"], a:0, exp:"距離。「距」は足へん。「巨大」の巨と区別。"},
+{cat:"kaki", q:"【シンケン】な表情で話を聞く。", c:["真剣","真険","真検","新剣"], a:0, exp:"真剣=本気。もともとは本物の剣のこと。「危険」「点検」と使い分け。"},
+{cat:"kaki", q:"遠くで【カミナリ】が鳴っている。", c:["雷","雪","霧","震"], a:0, exp:"雷(かみなり)。雨かんむり+田。「雷鳴」「落雷」でも使う。"},
+{cat:"kaki", q:"感動して【ナミダ】があふれた。", c:["涙","波","泣","液"], a:0, exp:"涙(なみだ)。さんずい+戻。「感涙」でも使う。"},
+{cat:"kaki", q:"警察が犯人を【ツイセキ】する。", c:["追跡","追積","追績","追席"], a:0, exp:"追跡=あとを追うこと。「跡」は足へん。「積」「績」との使い分け頻出!"},
+{cat:"kaki", q:"古い部品を新品と【コウカン】する。", c:["交換","交歓","交感","好感"], a:0, exp:"交換=取りかえること。「交歓」は打ち解けて楽しむこと。文脈で判断。"},
+{cat:"kaki", q:"【ハデ】な服装で登場する。", c:["派手","波手","破手","葉手"], a:0, exp:"派手。対義語は「地味」。「派」は「流派」「立派」でも使う。"},
+{cat:"kaki", q:"【トウメイ】な液体を観察する。", c:["透明","通明","投明","党明"], a:0, exp:"透明。「透」は「透ける(すける)」とも読む。"},
+{cat:"kaki", q:"【ムチュウ】でゲームをしていた。", c:["夢中","霧中","無中","夢注"], a:0, exp:"夢中。「五里霧中(ごりむちゅう)」の霧中と間違えやすいので注意!"},
+{cat:"kaki", q:"【シバイ】を見に劇場へ行く。", c:["芝居","芝井","柴居","司会"], a:0, exp:"芝居(しばい)。昔、芝の上に座って見たことから。"},
+{cat:"kaki", q:"やり方に【マヨ】ったら基本に戻る。", c:["迷","謎","迷よ","眠"], a:0, exp:"迷う。「迷惑」「迷路」の迷。送りがなは「迷う」。"},
+
+/* ===== 同音・同訓異字 ===== */
+{cat:"douon", q:"彼の意見を【シジ】する。", c:["支持","指示","師事","私事"], a:0, exp:"支持=賛成して応援すること。「指示」は命令・さしず。"},
+{cat:"douon", q:"先生の【シジ】に従って行動する。", c:["指示","支持","師事","四時"], a:0, exp:"指示=さしずすること。「支持」との使い分けは超頻出!"},
+{cat:"douon", q:"身長を【ハカ】る。", c:["測る","計る","量る","図る"], a:0, exp:"長さ・深さは「測る」、時間・数は「計る」、重さ・体積は「量る」。"},
+{cat:"douon", q:"タイムを【ハカ】る。", c:["計る","測る","量る","謀る"], a:0, exp:"時間・数を数えるのは「計る」。時計の「計」と覚えよう。"},
+{cat:"douon", q:"小麦粉の重さを【ハカ】る。", c:["量る","計る","測る","図る"], a:0, exp:"重さ・体積は「量る」。「計量カップ」をイメージ。"},
+{cat:"douon", q:"かぜが【ナオ】る。", c:["治る","直る","修る","療る"], a:0, exp:"病気・けがは「治る」、機械や誤りは「直る」。"},
+{cat:"douon", q:"自転車の故障が【ナオ】る。", c:["直る","治る","戻る","修る"], a:0, exp:"物の故障・誤りは「直る」。病気は「治る」。"},
+{cat:"douon", q:"窓を【ア】けて空気を入れかえる。", c:["開ける","空ける","明ける","揚ける"], a:0, exp:"閉じたものをひらくのは「開ける」。"},
+{cat:"douon", q:"夜が【ア】けて朝になる。", c:["明ける","開ける","空ける","飽ける"], a:0, exp:"夜明け・年明けは「明ける」。"},
+{cat:"douon", q:"席を【ア】けて待つ。", c:["空ける","開ける","明ける","挙ける"], a:0, exp:"からにする・すきまを作るのは「空ける」。"},
+{cat:"douon", q:"【イガイ】な結果に驚いた。", c:["意外","以外","遺外","案外"], a:0, exp:"意外=思いのほか。「以外」は「〜をのぞく」の意味。"},
+{cat:"douon", q:"関係者【イガイ】は立入禁止だ。", c:["以外","意外","位外","医外"], a:0, exp:"以外=それをのぞく他のもの。「意外」と混同しない!"},
+{cat:"douon", q:"兄弟なのに【タイショウ】的な性格だ。", c:["対照","対象","対称","大将"], a:0, exp:"対照=くらべたときの違いが際立つこと。「対照的」はこれ。"},
+{cat:"douon", q:"左右【タイショウ】の図形をかく。", c:["対称","対照","対象","大賞"], a:0, exp:"対称=つりあっていること。「線対称・点対称」は数学でも登場。"},
+{cat:"douon", q:"中学生を【タイショウ】に調査する。", c:["対象","対称","対照","大正"], a:0, exp:"対象=はたらきかける相手・目標。"},
+{cat:"douon", q:"事故の責任を【ツイキュウ】する。", c:["追及","追求","追究","追級"], a:0, exp:"追及=責任などを問いつめる。「及」は「およぶ」。"},
+{cat:"douon", q:"理想の生き方を【ツイキュウ】する。", c:["追求","追及","追究","墜求"], a:0, exp:"追求=手に入れようと追い求める。利益・理想・幸福など。"},
+{cat:"douon", q:"宇宙の真理を【ツイキュウ】する。", c:["追究","追求","追及","対究"], a:0, exp:"追究=学問的に深く調べきわめる。研究の「究」。"},
+{cat:"douon", q:"重大なあやまちを【オカ】す。", c:["犯す","冒す","侵す","推す"], a:0, exp:"罪・ミスは「犯す」。犯罪の犯。"},
+{cat:"douon", q:"危険を【オカ】して救助に向かう。", c:["冒す","犯す","侵す","押す"], a:0, exp:"あえて危険なことをするのは「冒す」。冒険の冒!"},
+{cat:"douon", q:"他国の領土を【オカ】す。", c:["侵す","犯す","冒す","越す"], a:0, exp:"領域にふみこむのは「侵す」。侵入・侵略の侵。"},
+{cat:"douon", q:"劇の【カンシュウ】が拍手を送った。", c:["観衆","慣習","監修","感収"], a:0, exp:"観衆=見物する大勢の人。「慣習」はならわし、「監修」は編集の監督。"},
+
+/* ===== 部首 ===== */
+{cat:"bushu", q:"「疲」の部首はどれ?", c:["疒(やまいだれ)","广(まだれ)","皮(けがわ)","冫(にすい)"], a:0, exp:"疲・痛・病など、体の状態を表す字は疒(やまいだれ)。"},
+{cat:"bushu", q:"「闘」の部首はどれ?", c:["門(もんがまえ)","豆(まめ)","寸(すん)","王(おう)"], a:0, exp:"闘の部首は門(もんがまえ)。中の「豆+寸」は音や意味を補う部分。"},
+{cat:"bushu", q:"「街」の部首はどれ?", c:["行(ぎょうがまえ)","土(つち)","圭(けい)","彳(ぎょうにんべん)"], a:0, exp:"街は「行」の間に「圭」が入った形。部首は行(ぎょうがまえ・ゆきがまえ)。"},
+{cat:"bushu", q:"「載」の部首はどれ?", c:["車(くるま)","戈(ほこづくり)","土(つち)","十(じゅう)"], a:0, exp:"載(のせる)の部首は車。「積載」「連載」など車に関係する意味から。"},
+{cat:"bushu", q:"「奥」の部首はどれ?", c:["大(だい)","米(こめ)","冂(けいがまえ)","一(いち)"], a:0, exp:"奥の部首は「大」。意外な部首として頻出!"},
+{cat:"bushu", q:"「疑」の部首はどれ?", c:["疋(ひき)","匕(さじ)","矢(や)","子(こ)"], a:0, exp:"疑の部首は疋(ひき)。これも意外な部首の代表格。"},
+{cat:"bushu", q:"「監」の部首はどれ?", c:["皿(さら)","臣(しん)","目(め)","血(ち)"], a:0, exp:"監の部首は皿。盆・盛・盗なども皿が部首。"},
+{cat:"bushu", q:"「響」の部首はどれ?", c:["音(おと)","郷(さと)","幺(いとがしら)","日(ひ)"], a:0, exp:"響(ひびく)の部首は音。音に関係する意味だから。"},
+{cat:"bushu", q:"「恐」の部首はどれ?", c:["心(こころ)","工(たくみ)","凡(ぼん)","丶(てん)"], a:0, exp:"恐の部首は心。感情を表す字は心・忄(りっしんべん)が多い。"},
+{cat:"bushu", q:"「敷」の部首はどれ?", c:["攵(ぼくづくり)","方(ほう)","田(た)","寸(すん)"], a:0, exp:"敷の部首は攵(ぼくづくり・のぶん)。攻・敵・敗も同じ。"},
+{cat:"bushu", q:"「壁」の部首はどれ?", c:["土(つち)","尸(しかばね)","口(くち)","辛(からい)"], a:0, exp:"壁の部首は土。壁は土で作るから。「癖」は疒なので注意。"},
+{cat:"bushu", q:"「膚」の部首はどれ?", c:["肉(にく)","虍(とらがしら)","田(た)","疒(やまいだれ)"], a:0, exp:"膚(はだ)の部首は肉。体に関する字だから。意外な部首として出題される。"},
+{cat:"bushu", q:"「雑」の部首はどれ?", c:["隹(ふるとり)","木(き)","九(きゅう)","亠(なべぶた)"], a:0, exp:"雑の部首は隹(ふるとり)。難・離・雄なども隹。"},
+{cat:"bushu", q:"「歓」の部首はどれ?", c:["欠(あくび)","隹(ふるとり)","矢(や)","口(くち)"], a:0, exp:"歓の部首は欠(あくび・かける)。歌・欲も同じ部首。"},
+{cat:"bushu", q:"「戒」の部首はどれ?", c:["戈(ほこづくり)","廾(にじゅうあし)","十(じゅう)","一(いち)"], a:0, exp:"戒(いましめる)の部首は戈(ほこ)。戦いに関係する字。"},
+{cat:"bushu", q:"「隠」の部首はどれ?", c:["阝(こざとへん)","爫(つめかんむり)","心(こころ)","ヨ(けいがしら)"], a:0, exp:"隠の部首は阝(こざとへん)。左側の阝はこざとへん、右側は「おおざと」。"},
+{cat:"bushu", q:"「趣」の部首はどれ?", c:["走(そうにょう)","取(とる)","耳(みみ)","又(また)"], a:0, exp:"趣の部首は走(そうにょう)。起・越・超も同じ。"},
+{cat:"bushu", q:"「霧」の部首はどれ?", c:["雨(あめかんむり)","矛(ほこ)","攵(ぼくづくり)","力(ちから)"], a:0, exp:"霧の部首は雨。雷・雲・露など天気の字は雨かんむり。"},
+{cat:"bushu", q:"「舞」の部首はどれ?", c:["舛(まいあし)","無(なし)","夕(ゆうべ)","亠(なべぶた)"], a:0, exp:"舞の部首は舛(まいあし)。かなりの難問。出たらラッキー問題!"},
+
+/* ===== 熟語の構成 ===== */
+{cat:"kousei", q:"「濃淡」の構成は?", c:KOUSEI_C(), a:1, exp:"濃い⇔淡い。反対の意味の組み合わせ(イ)。"},
+{cat:"kousei", q:"「越境」の構成は?", c:KOUSEI_C(), a:3, exp:"「境を越える」。下の字が上の字の目的語になる(エ)。"},
+{cat:"kousei", q:"「温暖」の構成は?", c:KOUSEI_C(), a:0, exp:"温かい=暖かい。同じような意味の組み合わせ(ア)。"},
+{cat:"kousei", q:"「未婚」の構成は?", c:KOUSEI_C(), a:4, exp:"「未だ婚せず」。上の字が下の字を打ち消す(オ)。未・不・無・非が目印。"},
+{cat:"kousei", q:"「送迎」の構成は?", c:KOUSEI_C(), a:1, exp:"送る⇔迎える。反対の意味(イ)。"},
+{cat:"kousei", q:"「離陸」の構成は?", c:KOUSEI_C(), a:3, exp:"「陸を離れる」。下が上の目的語(エ)。着席・脱帽も同じ型。"},
+{cat:"kousei", q:"「猛犬」の構成は?", c:KOUSEI_C(), a:2, exp:"「猛々しい→犬」。上が下を修飾する(ウ)。"},
+{cat:"kousei", q:"「豊富」の構成は?", c:KOUSEI_C(), a:0, exp:"豊か=富む。同じような意味(ア)。"},
+{cat:"kousei", q:"「不振」の構成は?", c:KOUSEI_C(), a:4, exp:"「振るわない」。上の字が打ち消し(オ)。"},
+{cat:"kousei", q:"「攻防」の構成は?", c:KOUSEI_C(), a:1, exp:"攻める⇔防ぐ。反対の意味(イ)。"},
+{cat:"kousei", q:"「濁流」の構成は?", c:KOUSEI_C(), a:2, exp:"「濁った→流れ」。上が下を修飾(ウ)。"},
+{cat:"kousei", q:"「恐怖」の構成は?", c:KOUSEI_C(), a:0, exp:"恐れる=怖がる。同じような意味(ア)。"},
+{cat:"kousei", q:"「無縁」の構成は?", c:KOUSEI_C(), a:4, exp:"「縁が無い」。上の字が打ち消し(オ)。"},
+{cat:"kousei", q:"「執筆」の構成は?", c:KOUSEI_C(), a:3, exp:"「筆を執(と)る」。下が上の目的語(エ)。"},
+{cat:"kousei", q:"「鋭利」の構成は?", c:KOUSEI_C(), a:0, exp:"鋭い=利い(するどい)。同じような意味(ア)。"},
+{cat:"kousei", q:"「珍品」の構成は?", c:KOUSEI_C(), a:2, exp:"「珍しい→品」。上が下を修飾(ウ)。"},
+{cat:"kousei", q:"「賞罰」の構成は?", c:KOUSEI_C(), a:1, exp:"賞⇔罰。反対の意味(イ)。"},
+{cat:"kousei", q:"「脱帽」の構成は?", c:KOUSEI_C(), a:3, exp:"「帽子を脱ぐ」。下が上の目的語(エ)。"},
+
+/* ===== 対義語・類義語 ===== */
+{cat:"taigi", q:"対義語:「需要」⇔「供□」。□に入る漢字は?", c:["給","求","級","究"], a:0, exp:"需要⇔供給。社会科でも必出のペア。"},
+{cat:"taigi", q:"対義語:「起床」⇔「就□」。□に入る漢字は?", c:["寝","眠","床","泊"], a:0, exp:"起床⇔就寝。「寝」は4級の漢字。"},
+{cat:"taigi", q:"対義語:「温暖」⇔「寒□」。□に入る漢字は?", c:["冷","凍","冬","例"], a:0, exp:"温暖⇔寒冷。気候の対義語ペア。"},
+{cat:"taigi", q:"対義語:「平凡」⇔「□凡」。□に入る漢字は?", c:["非","悲","飛","費"], a:0, exp:"平凡⇔非凡。「非」は打ち消しの字。"},
+{cat:"taigi", q:"対義語:「故意」⇔「過□」。□に入る漢字は?", c:["失","質","疾","室"], a:0, exp:"故意(わざと)⇔過失(うっかり)。法律でも使う対義語。"},
+{cat:"taigi", q:"対義語:「防御」⇔「□撃」。□に入る漢字は?", c:["攻","功","好","向"], a:0, exp:"防御⇔攻撃。"},
+{cat:"taigi", q:"対義語:「濃厚」⇔「□泊」。□に入る漢字は?", c:["淡","炭","短","端"], a:0, exp:"濃厚⇔淡泊。「淡」はさんずい。あっさりしていること。"},
+{cat:"taigi", q:"対義語:「鈍感」⇔「□感」。□に入る漢字は?", c:["敏","貧","品","便"], a:0, exp:"鈍感⇔敏感。「鈍」と「敏」はどちらも4級。"},
+{cat:"taigi", q:"対義語:「巨大」⇔「□小」。□に入る漢字は?", c:["微","美","尾","未"], a:0, exp:"巨大⇔微小。「微」は「微妙」「微生物」でも使う。"},
+{cat:"taigi", q:"類義語:「永遠」=「永□」。□に入る漢字は?", c:["久","究","求","級"], a:0, exp:"永遠=永久。どちらも「いつまでも続く」。"},
+{cat:"taigi", q:"類義語:「手段」=「方□」。□に入る漢字は?", c:["法","去","放","訪"], a:0, exp:"手段=方法。やり方のこと。"},
+{cat:"taigi", q:"類義語:「用心」=「警□」。□に入る漢字は?", c:["戒","械","開","界"], a:0, exp:"用心=警戒。「戒」は「いましめる」。"},
+{cat:"taigi", q:"類義語:「屈指」=「有□」。□に入る漢字は?", c:["数","名","力","頭"], a:0, exp:"屈指=有数。「指を折って数えるほど優れている」という意味。"},
+{cat:"taigi", q:"類義語:「突然」=「不□」。□に入る漢字は?", c:["意","易","井","惑"], a:0, exp:"突然=不意。「不意打ち」の不意。"},
+{cat:"taigi", q:"類義語:「近隣」=「近□」。□に入る漢字は?", c:["所","場","接","辺"], a:0, exp:"近隣=近所。「隣」は「となり」。"},
+{cat:"taigi", q:"類義語:「不満」=「不□」。□に入る漢字は?", c:["服","復","福","副"], a:0, exp:"不満=不服。納得できないこと。"},
+{cat:"taigi", q:"対義語:「拡大」⇔「□小」。□に入る漢字は?", c:["縮","宿","粛","短"], a:0, exp:"拡大⇔縮小。基本の対義語ペア。"},
+{cat:"taigi", q:"類義語:「値段」=「価□」。□に入る漢字は?", c:["格","確","客","額"], a:0, exp:"値段=価格。「価」はあたい。"},
+
+/* ===== 送りがな ===== */
+{cat:"okuri", q:"【オソロシイ】夢を見た。正しい書き方は?", c:["恐ろしい","恐しい","恐そろしい","怖ろしい"], a:0, exp:"恐ろしい。「恐」+「ろしい」。送りがなを削りすぎない!"},
+{cat:"okuri", q:"星が【カガヤク】。正しい書き方は?", c:["輝く","輝やく","輝がやく","耀く"], a:0, exp:"輝く。「輝やく」と余分に送るミスが超多い!"},
+{cat:"okuri", q:"問題を【カカエル】。正しい書き方は?", c:["抱える","抱かえる","抱る","擁える"], a:0, exp:"抱える。「抱く(だく)」「抱く(いだく)」との読み分けも頻出。"},
+{cat:"okuri", q:"作品にそっと手を【フレル】。正しい書き方は?", c:["触れる","振れる","触る","觸れる"], a:0, exp:"触れる(ふれる)。「触る」は「さわる」と読む。"},
+{cat:"okuri", q:"大声で【サケブ】。正しい書き方は?", c:["叫ぶ","叫けぶ","号ぶ","呼ぶ"], a:0, exp:"叫ぶ。「叫けぶ」としないこと。"},
+{cat:"okuri", q:"突然の知らせに【オドロク】。正しい書き方は?", c:["驚く","驚ろく","驚どろく","脅く"], a:0, exp:"驚く。「驚ろく」は誤り。"},
+{cat:"okuri", q:"敵から【ニゲル】。正しい書き方は?", c:["逃げる","逃る","逃ける","迷げる"], a:0, exp:"逃げる。「逃す(のがす)」「逃れる(のがれる)」の読み分けも出る。"},
+{cat:"okuri", q:"兄を【タヨル】。正しい書き方は?", c:["頼る","頼よる","便る","依る"], a:0, exp:"頼る。「頼もしい」「頼む」も送りがな注意。"},
+{cat:"okuri", q:"洗濯物がよく【カワク】。正しい書き方は?", c:["乾く","乾わく","干く","燥く"], a:0, exp:"乾く。「乾杯」「乾燥」の乾。"},
+{cat:"okuri", q:"駅で客を【ムカエル】。正しい書き方は?", c:["迎える","迎かえる","向える","迎る"], a:0, exp:"迎える。「迎かえる」は誤り。歓迎の迎。"},
+{cat:"okuri", q:"【コワイ】映画を見る。正しい書き方は?", c:["怖い","怖わい","恐い","布い"], a:0, exp:"怖い。「恐い」は常用漢字表にない書き方なので漢検では×。"},
+{cat:"okuri", q:"金品を【ヌスム】。正しい書き方は?", c:["盗む","盗すむ","塗む","次む"], a:0, exp:"盗む。「盗難」「強盗」の盗。"},
+{cat:"okuri", q:"地図に【クワシイ】。正しい書き方は?", c:["詳しい","詳わしい","詳くしい","精しい"], a:0, exp:"詳しい。「詳細」の詳。「精しい」は常用漢字表にない読み。"},
+{cat:"okuri", q:"【アヤシイ】人影を見た。正しい書き方は?", c:["怪しい","怪やしい","妖しい","怪い"], a:0, exp:"怪しい。「怪談」「怪獣」の怪。"},
+{cat:"okuri", q:"別れを【オシム】。正しい書き方は?", c:["惜しむ","惜む","惜ししむ","借しむ"], a:0, exp:"惜しむ。「惜敗」の惜。「借」と形が似ているので注意。"},
+
+/* ===== 四字熟語 ===== */
+{cat:"yoji", q:"一触即□(今にも爆発しそうな状態)。□は?", c:["発","髪","初","鉢"], a:0, exp:"一触即発(いっしょくそくはつ)。触れれば即、爆発する緊張状態。"},
+{cat:"yoji", q:"危機一□(危ないところで助かること)。□は?", c:["髪","発","抜","半"], a:0, exp:"危機一髪(ききいっぱつ)。髪の毛一本ほどの差。「一発」は誤り!"},
+{cat:"yoji", q:"単□直入(前置きなしに本題に入る)。□は?", c:["刀","頭","島","当"], a:0, exp:"単刀直入(たんとうちょくにゅう)。一人で刀を持って切りこむ意味。"},
+{cat:"yoji", q:"半信半□(信じきれずに迷う)。□は?", c:["疑","儀","議","技"], a:0, exp:"半信半疑(はんしんはんぎ)。半分信じ、半分疑う。"},
+{cat:"yoji", q:"一心不□(一つのことに集中する)。□は?", c:["乱","欄","覧","卵"], a:0, exp:"一心不乱(いっしんふらん)。心が乱れないこと。"},
+{cat:"yoji", q:"意味□長(奥に深い意味がある)。□は?", c:["深","慎","伸","身"], a:0, exp:"意味深長(いみしんちょう)。「慎重」と書かないよう注意!"},
+{cat:"yoji", q:"疑心暗□(疑い出すと何でも怖くなる)。□は?", c:["鬼","気","器","記"], a:0, exp:"疑心暗鬼(ぎしんあんき)。暗闇に鬼がいるように見えること。"},
+{cat:"yoji", q:"油断大□(油断は最大の敵)。□は?", c:["敵","適","摘","滴"], a:0, exp:"油断大敵(ゆだんたいてき)。「敵・適・摘・滴」の書き分けは4級頻出!"},
+{cat:"yoji", q:"大器□成(大人物は遅れて成功する)。□は?", c:["晩","番","盤","万"], a:0, exp:"大器晩成(たいきばんせい)。大きな器は完成が遅い。"},
+{cat:"yoji", q:"異□同音(みんなが口をそろえて言う)。□は?", c:["口","句","工","交"], a:0, exp:"異口同音(いくどうおん)。読みは「いくどうおん」。「いこう」ではない!"},
+{cat:"yoji", q:"十人十□(人それぞれ好みが違う)。□は?", c:["色","職","式","織"], a:0, exp:"十人十色(じゅうにんといろ)。"},
+{cat:"yoji", q:"□機応変(状況に合わせてうまく対応)。□は?", c:["臨","輪","隣","林"], a:0, exp:"臨機応変(りんきおうへん)。"},
+{cat:"yoji", q:"縦横無□(思う存分に活躍する)。□は?", c:["尽","陣","尋","迅"], a:0, exp:"縦横無尽(じゅうおうむじん)。「尽」は4級。「尽きる(つきる)」。"},
+{cat:"yoji", q:"前代未□(今まで聞いたこともない)。□は?", c:["聞","文","問","門"], a:0, exp:"前代未聞(ぜんだいみもん)。「未聞」=まだ聞かない。"},
+{cat:"yoji", q:"電光石□(動きが非常にすばやい)。□は?", c:["火","化","花","過"], a:0, exp:"電光石火(でんこうせっか)。稲妻と火打ち石の火花の速さ。"},
+{cat:"yoji", q:"品行方□(行いがきちんと正しい)。□は?", c:["正","整","成","声"], a:0, exp:"品行方正(ひんこうほうせい)。"},
+{cat:"yoji", q:"針小□大(小さなことを大げさに言う)。□は?", c:["棒","傍","忙","冒"], a:0, exp:"針小棒大(しんしょうぼうだい)。針を棒のように言う。「棒・傍・忙・冒」に注意。"},
+{cat:"yoji", q:"驚天動□(世間をあっと驚かせる)。□は?", c:["地","池","置","知"], a:0, exp:"驚天動地(きょうてんどうち)。天を驚かせ地を動かす。"},
+
+/* ===== 誤字訂正 ===== */
+{cat:"goji", q:"彼は環境問題に深い感心を持っている。誤字の直し方は?", c:["感→関","心→信","環→観","題→代"], a:0, exp:"正しくは「関心」。心を引かれること。「感心」は「えらいと思う」こと。"},
+{cat:"goji", q:"休日は映画観賞を楽しんでいる。誤字の直し方は?", c:["観→鑑","賞→章","映→写","楽→落"], a:0, exp:"芸術作品を味わうのは「鑑賞」。「観賞」は草花や魚を見て楽しむこと。"},
+{cat:"goji", q:"彼女は成績優収でクラスの代表に選ばれた。誤字の直し方は?", c:["収→秀","優→有","成→整","績→積"], a:0, exp:"正しくは「優秀」。「秀」はひいでること。"},
+{cat:"goji", q:"事故の現場を目激した人をさがしている。誤字の直し方は?", c:["激→撃","目→木","現→見","場→上"], a:0, exp:"正しくは「目撃」。「撃」は攻撃の撃。「激」は激しいの激。"},
+{cat:"goji", q:"危検な場所には絶対に近づかない。誤字の直し方は?", c:["検→険","危→机","場→揚","近→均"], a:0, exp:"正しくは「危険」。「険」はこざとへん。「検査」の検、「保険」の険を区別!"},
+{cat:"goji", q:"体調不良のため大会への出場を辞対した。誤字の直し方は?", c:["対→退","辞→自","出→主","場→情"], a:0, exp:"正しくは「辞退」。しりぞくの「退」。"},
+{cat:"goji", q:"暴風雨に備えて窓を保強する。誤字の直し方は?", c:["保→補","強→教","窓→総","備→美"], a:0, exp:"正しくは「補強」。おぎなって強くする。「保」はたもつ。"},
+{cat:"goji", q:"不審者の侵入を坊ぐ対策をとる。誤字の直し方は?", c:["坊→防","侵→浸","入→人","対→退"], a:0, exp:"正しくは「防ぐ」。「坊」はお坊さんの坊。「防・妨・坊・肪」の区別!"},
+{cat:"goji", q:"観光地の混雑を悲けるため朝早く出発した。誤字の直し方は?", c:["悲→避","混→根","雑→維","観→感"], a:0, exp:"正しくは「避ける」。「避難」の避。しんにょうがつく。"},
+{cat:"goji", q:"誕生日に祖父から高価な時計を送られた。誤字の直し方は?", c:["送→贈","誕→短","計→形","高→功"], a:0, exp:"プレゼントは「贈る」。貝へんの「贈」。「送る」は届けること。"},
+{cat:"goji", q:"授業の内容をその日のうちに複習する。誤字の直し方は?", c:["複→復","習→周","授→受","内→字"], a:0, exp:"正しくは「復習」。くり返すの「復」。「複」は複数・複雑の複。"},
+{cat:"goji", q:"新製品が売れて会社の業積が大きく伸びた。誤字の直し方は?", c:["積→績","業→行","伸→身","製→制"], a:0, exp:"正しくは「業績」。いとへんの「績」。成績・功績も同じ。「積」は積む。"},
+{cat:"goji", q:"音楽会で美しいピアノの演壮を聴いた。誤字の直し方は?", c:["壮→奏","演→縁","美→微","会→回"], a:0, exp:"正しくは「演奏」。「奏」はかなでる。"},
+{cat:"goji", q:"事件の少細を新聞で初めて知った。誤字の直し方は?", c:["少→詳","細→再","事→自","件→見"], a:0, exp:"正しくは「詳細」。くわしくこまかいこと。"},
+{cat:"goji", q:"つり銭が足りないか確任してから店を出た。誤字の直し方は?", c:["任→認","確→格","銭→残","店→点"], a:0, exp:"正しくは「確認」。「認」はみとめる。「任」はまかせる。"},
+];
+
+/* 熟語の構成の共通選択肢 */
+function KOUSEI_C(){
+  return [
+    "ア:同じような意味の字を重ねた(例:身体)",
+    "イ:反対・対の意味の字を重ねた(例:上下)",
+    "ウ:上の字が下の字を修飾している(例:洋画)",
+    "エ:下の字が上の字の目的語になる(例:着席)",
+    "オ:上の字が下の字を打ち消している(例:非常)",
+  ];
+}
+
+QUESTIONS.forEach((q,i)=>q.id=i);
+
+/* ---------- 敵キャラ ---------- */
+const ENEMIES = [
+  {name:"ゴジゴブリン",emoji:"👺",flavor:"誤字をばらまく小鬼"},
+  {name:"ヨミトリバット",emoji:"🦇",flavor:"読めない漢字に潜むコウモリ"},
+  {name:"ブシュスコーピオン",emoji:"🦂",flavor:"部首を隠し持つサソリ"},
+  {name:"オクリガナウルフ",emoji:"🐺",flavor:"送りがなを食い散らかす狼"},
+  {name:"ジュクゴタートル",emoji:"🐢",flavor:"熟語の構成を守る堅い亀"},
+  {name:"ドウオンゴースト",emoji:"👻",flavor:"同じ音で化ける幽霊"},
+  {name:"カンジザウルス",emoji:"🦖",flavor:"書き取りミスを狙う恐竜"},
+  {name:"サイレントニンジャ",emoji:"🥷",flavor:"対義語で攻めてくる忍者"},
+  {name:"ヨジドラゴン",emoji:"🐉",flavor:"四字熟語を吐く竜"},
+];
+const BOSS = {name:"試験の魔王カンケン4世",emoji:"😈",flavor:"漢検4級 本番形式・制限時間つき"};
+
+/* ---------- レベル称号 ---------- */
+const TITLES = ["漢字見習い","寺子屋の弟子","漢字戦士","部首ハンター","漢字侍","漢字剣豪","師範代","漢字師範","漢字達人","漢字王","伝説の書聖","漢検マスター"];
+function levelFromXp(xp){ let lv=1; while(xp >= xpNeed(lv+1) && lv<99) lv++; return lv; }
+function xpNeed(lv){ return 50*(lv-1)*lv; }  /* lv2=100, lv3=300, lv4=600 ... */
+function titleFor(lv){ return TITLES[Math.min(TITLES.length-1, lv-1)]; }
+
+/* ---------- バッジ ---------- */
+const BADGES = [
+  {id:"first",   emoji:"⚔️", name:"初陣",         desc:"はじめてのバトルをクリア"},
+  {id:"combo5",  emoji:"🔥", name:"五連撃",       desc:"5コンボを達成"},
+  {id:"combo10", emoji:"💥", name:"十連撃",       desc:"10コンボを達成"},
+  {id:"perfect", emoji:"💯", name:"パーフェクト", desc:"ノーミスでバトルに勝利"},
+  {id:"kill100", emoji:"🗡️", name:"百人斬り",     desc:"累計100問正解"},
+  {id:"kill300", emoji:"🏆", name:"三百人斬り",   desc:"累計300問正解"},
+  {id:"streak3", emoji:"🐛", name:"修行の虫",     desc:"3日連続で修行"},
+  {id:"streak7", emoji:"🏮", name:"七日間の修行", desc:"7日連続で修行"},
+  {id:"allcat",  emoji:"🗺️", name:"全分野制覇",   desc:"9分野すべてに挑戦"},
+  {id:"boss",    emoji:"👑", name:"魔王討伐",     desc:"模擬試験ボスに勝利(正答率70%以上)"},
+  {id:"gachi",   emoji:"⌨️", name:"ガチ勢",       desc:"入力モードで30問正解"},
+  {id:"zukan",   emoji:"📚", name:"漢字コレクター", desc:"全問題に一度は挑戦"},
+];
+
+/* ---------- セーブデータ ---------- */
+const SAVE_KEY = "kanken4quest_v1";
+let S = loadSave();
+function defaultSave(){
+  return {
+    xp:0, totalCorrect:0, totalAnswered:0, inputCorrect:0,
+    streak:0, lastDay:null,
+    badges:[], catsPlayed:[],
+    srs:{},           /* id -> {box, due} */
+    catStats:{},      /* cat -> {ok, ng} */
+    bossCleared:0, bossBest:0,
+    sound:true, inputMode:false,
+  };
+}
+function loadSave(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(raw) return Object.assign(defaultSave(), JSON.parse(raw));
+  }catch(e){}
+  return defaultSave();
+}
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+
+/* ---------- SRS (ライトナー式間隔反復) ----------
+   box 0..4 / 復習間隔: 当日,1日,3日,7日,14日 */
+const INTERVALS = [0,1,3,7,14];
+const DAY = 24*60*60*1000;
+function srsOf(id){ return S.srs[id] || null; }
+function srsCorrect(id){
+  const r = S.srs[id] || {box:-1};
+  const box = Math.min(4, (r.box<0?0:r.box)+1);
+  S.srs[id] = {box, due: Date.now() + INTERVALS[box]*DAY};
+}
+function srsWrong(id){
+  S.srs[id] = {box:0, due: Date.now()};  /* 間違えたら箱1に戻して当日再出題 */
+}
+function dueQuestions(){
+  const now = Date.now();
+  return QUESTIONS.filter(q=>{ const r=srsOf(q.id); return r && r.due<=now; });
+}
+function unseenQuestions(){ return QUESTIONS.filter(q=>!srsOf(q.id)); }
+
+function shuffle(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+/* 今日の特訓: 復習期限が来た問題を最優先 → 新規 → 期限が近いもの。分野はシャッフル(交互練習) */
+function pickDaily(n){
+  let pool = shuffle(dueQuestions()).slice(0,n);
+  if(pool.length<n) pool = pool.concat(shuffle(unseenQuestions()).slice(0, n-pool.length));
+  if(pool.length<n){
+    const rest = QUESTIONS.filter(q=>!pool.includes(q)).sort((a,b)=>(srsOf(a.id).due)-(srsOf(b.id).due));
+    pool = pool.concat(rest.slice(0, n-pool.length));
+  }
+  return shuffle(pool);
+}
+function pickCat(cat, n){
+  const inCat = QUESTIONS.filter(q=>q.cat===cat);
+  const now = Date.now();
+  let pool = shuffle(inCat.filter(q=>{const r=srsOf(q.id); return r&&r.due<=now;})).slice(0,n);
+  if(pool.length<n) pool = pool.concat(shuffle(inCat.filter(q=>!srsOf(q.id))).slice(0,n-pool.length));
+  if(pool.length<n){
+    const rest = inCat.filter(q=>!pool.includes(q)).sort((a,b)=>(srsOf(a.id).box)-(srsOf(b.id).box));
+    pool = pool.concat(rest.slice(0,n-pool.length));
+  }
+  return shuffle(pool);
+}
+/* 模擬試験: 本番の配点比率でサンプリング */
+function pickMock(n){
+  const totalW = CATS.reduce((s,c)=>s+c.weight,0);
+  let picked=[];
+  CATS.forEach(c=>{
+    const k = Math.max(1, Math.round(n*c.weight/totalW));
+    picked = picked.concat(shuffle(QUESTIONS.filter(q=>q.cat===c.id)).slice(0,k));
+  });
+  return shuffle(picked).slice(0,n);
+}
+
+/* ---------- サウンド (WebAudio) ---------- */
+let AC=null;
+function beep(freq,dur,type="square",vol=.15,delay=0){
+  if(!S.sound) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    const o=AC.createOscillator(), g=AC.createGain();
+    o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol, AC.currentTime+delay);
+    g.gain.exponentialRampToValueAtTime(.001, AC.currentTime+delay+dur);
+    o.connect(g); g.connect(AC.destination);
+    o.start(AC.currentTime+delay); o.stop(AC.currentTime+delay+dur);
+  }catch(e){}
+}
+const sfx = {
+  ok(){ beep(660,.09); beep(880,.12,"square",.15,.08); },
+  crit(){ beep(660,.08); beep(880,.08,"square",.15,.06); beep(1320,.18,"square",.18,.12); },
+  ng(){ beep(180,.25,"sawtooth",.18); },
+  win(){ [523,659,784,1047].forEach((f,i)=>beep(f,.18,"square",.15,i*.12)); },
+  lose(){ [400,330,262,196].forEach((f,i)=>beep(f,.2,"sawtooth",.12,i*.15)); },
+  levelup(){ [523,659,784,1047,1319].forEach((f,i)=>beep(f,.15,"triangle",.2,i*.09)); },
+};
+
+/* ---------- 日付・ストリーク ---------- */
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+function bumpStreak(){
+  const today = todayStr();
+  if(S.lastDay===today) return;
+  const y=new Date(Date.now()-DAY);
+  const yesterday = y.getFullYear()+"-"+(y.getMonth()+1)+"-"+y.getDate();
+  S.streak = (S.lastDay===yesterday) ? S.streak+1 : 1;
+  S.lastDay = today;
+}
+
+/* ---------- バッジ判定 ---------- */
+let newBadges=[];
+function award(id){
+  if(!S.badges.includes(id)){ S.badges.push(id); newBadges.push(BADGES.find(b=>b.id===id)); }
+}
+function checkBadges(battle){
+  if(battle){
+    award("first");
+    if(battle.maxCombo>=5) award("combo5");
+    if(battle.maxCombo>=10) award("combo10");
+    if(battle.wrong===0 && battle.qs.length>=8 && battle.win) award("perfect");
+  }
+  if(S.totalCorrect>=100) award("kill100");
+  if(S.totalCorrect>=300) award("kill300");
+  if(S.streak>=3) award("streak3");
+  if(S.streak>=7) award("streak7");
+  if(CATS.every(c=>S.catsPlayed.includes(c.id))) award("allcat");
+  if(S.bossCleared>0) award("boss");
+  if(S.inputCorrect>=30) award("gachi");
+  if(QUESTIONS.every(q=>srsOf(q.id))) award("zukan");
+}
+
+/* ---------- 画面管理 ---------- */
+const app = document.getElementById("app");
+let screen = "home";
+let B = null;       /* 現在のバトル状態 */
+let mockTimer=null;
+
+function nav(to){
+  if(B && !B.done && !confirm("バトルを中断する? (途中の記録は保存されないぞ)")) return;
+  stopTimer(); B=null; screen=to; render();
+}
+function stopTimer(){ if(mockTimer){clearInterval(mockTimer); mockTimer=null;} }
+
+const NAVS = [
+  {id:"home", ico:"🏠", label:"ホーム"},
+  {id:"cats", ico:"🗡️", label:"分野修行"},
+  {id:"badges", ico:"🏅", label:"バッジ"},
+  {id:"science", ico:"🧪", label:"学習法"},
+  {id:"settings", ico:"⚙️", label:"設定"},
+];
+function renderNav(){
+  document.getElementById("navbar").innerHTML = NAVS.map(n=>
+    `<button class="${screen===n.id?'active':''}" onclick="nav('${n.id}')"><span class="ico">${n.ico}</span>${n.label}</button>`
+  ).join("");
+}
+
+function render(){
+  renderNav();
+  if(screen==="home") renderHome();
+  else if(screen==="cats") renderCats();
+  else if(screen==="badges") renderBadges();
+  else if(screen==="science") renderScience();
+  else if(screen==="settings") renderSettings();
+  else if(screen==="battle") renderBattle();
+  else if(screen==="result") renderResult();
+}
+
+/* ---------- ホーム ---------- */
+function renderHome(){
+  const lv=levelFromXp(S.xp), cur=S.xp-xpNeed(lv), next=xpNeed(lv+1)-xpNeed(lv);
+  const due=dueQuestions().length, unseen=unseenQuestions().length;
+  const acc = S.totalAnswered ? Math.round(100*S.totalCorrect/S.totalAnswered) : 0;
+  app.innerHTML = `
+  <div class="row" style="margin-bottom:12px">
+    <h1>⚔️ 漢検4級クエスト</h1>
+  </div>
+  <div class="card">
+    <div class="row">
+      <div class="grow">
+        <div class="pill">Lv.${lv} ${titleFor(lv)}</div>
+        <div class="sub" style="margin-top:6px">XP ${S.xp} / 次のレベルまで ${xpNeed(lv+1)-S.xp}</div>
+      </div>
+      <div style="text-align:center">
+        <div class="streak-flame">${S.streak>0?"🔥":"🪵"}</div>
+        <div class="sub"><b class="gold">${S.streak}</b>日連続</div>
+      </div>
+    </div>
+    <div class="xpbar" style="margin-top:10px"><div style="width:${Math.min(100,100*cur/next)}%"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>🔥 今日の特訓 <span class="pill" style="float:right">${due>0?`復習 ${due}問が期限!`:`新しい敵が待つ`}</span></h2>
+    <p class="sub">忘れかけた問題を最優先で出題(分散学習)。全分野ミックス10問バトル!</p>
+    <button class="btn-main" onclick="startDaily()">バトル開始 (10問)</button>
+  </div>
+
+  <div class="card">
+    <h2>😈 ボス戦:模擬試験</h2>
+    <p class="sub">本番と同じ出題バランスで20問・制限時間10分。<b style="color:var(--gold)">正答率70%で勝利</b>(本番の合格ラインと同じ)。討伐回数:${S.bossCleared} / 最高記録:${S.bossBest}問</p>
+    <button class="btn-main btn-boss" onclick="startMock()">魔王に挑む</button>
+  </div>
+
+  <div class="card">
+    <h2>📊 冒険の記録</h2>
+    <div class="row" style="text-align:center;margin-bottom:10px">
+      <div class="grow"><div class="big">${S.totalCorrect}</div><div class="sub">累計正解</div></div>
+      <div class="grow"><div class="big">${acc}%</div><div class="sub">正答率</div></div>
+      <div class="grow"><div class="big">${QUESTIONS.length-unseen}<span class="sub">/${QUESTIONS.length}</span></div><div class="sub">挑戦済み</div></div>
+    </div>
+    ${CATS.map(c=>{
+      const st=S.catStats[c.id]||{ok:0,ng:0};
+      const inCat=QUESTIONS.filter(q=>q.cat===c.id);
+      const mastery = inCat.reduce((s,q)=>{const r=srsOf(q.id);return s+(r?Math.max(0,r.box)/4:0);},0)/inCat.length;
+      return `<div class="row" style="margin-bottom:6px">
+        <div style="width:130px;font-size:12px;font-weight:700">${c.emoji} ${c.label}</div>
+        <div class="grow mbar"><div style="width:${Math.round(mastery*100)}%"></div></div>
+        <div class="sub" style="width:38px;text-align:right">${Math.round(mastery*100)}%</div>
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
+/* ---------- 分野修行 ---------- */
+function renderCats(){
+  app.innerHTML = `
+  <h1 style="margin-bottom:12px">🗡️ 分野別修行</h1>
+  <p class="sub" style="margin-bottom:12px">漢検4級の大問構成に対応した9分野。苦手な敵を集中攻撃しよう(8問バトル)。</p>
+  ${CATS.map((c,i)=>{
+    const st=S.catStats[c.id]||{ok:0,ng:0};
+    const total=st.ok+st.ng;
+    const e=ENEMIES[i%ENEMIES.length];
+    return `<button class="cat-btn" onclick="startCat('${c.id}')">
+      <span style="font-size:26px">${e.emoji}</span>
+      <span class="grow">${c.emoji} ${c.label}<br><span class="sub" style="font-weight:400">${e.name} / ${total?`正答率 ${Math.round(100*st.ok/total)}%`:"未挑戦"}</span></span>
+      <span>▶</span>
+    </button>`;
+  }).join("")}`;
+}
+
+/* ---------- バトル開始 ---------- */
+function newBattle(qs, opts){
+  return Object.assign({
+    qs, i:0, hp:qs.length, playerHp:3, combo:0, maxCombo:0,
+    correct:0, wrong:0, wrongList:[], xpGain:0,
+    enemy: ENEMIES[Math.floor(Math.random()*ENEMIES.length)],
+    mock:false, timeLeft:0, done:false, answered:false, win:false,
+  }, opts||{});
+}
+function startDaily(){ B=newBattle(pickDaily(10)); screen="battle"; render(); }
+function startCat(cat){
+  if(!S.catsPlayed.includes(cat)) S.catsPlayed.push(cat);
+  const i=CATS.findIndex(c=>c.id===cat);
+  B=newBattle(pickCat(cat,8), {enemy:ENEMIES[i%ENEMIES.length]});
+  screen="battle"; render();
+}
+function startMock(){
+  B=newBattle(pickMock(20), {enemy:BOSS, mock:true, timeLeft:600});
+  screen="battle"; render();
+  mockTimer=setInterval(()=>{
+    if(!B||B.done){stopTimer();return;}
+    B.timeLeft--;
+    const el=document.getElementById("timer");
+    if(el){ el.textContent=fmtTime(B.timeLeft); if(B.timeLeft<=60) el.classList.add("warn"); }
+    if(B.timeLeft<=0){ stopTimer(); endBattle(); }
+  },1000);
+}
+function fmtTime(s){ return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+
+/* ---------- バトル画面 ---------- */
+function catLabel(id){ const c=CATS.find(c=>c.id===id); return c.emoji+" "+c.label; }
+function renderBattle(){
+  const q=B.qs[B.i];
+  const useInput = q.input && S.inputMode;
+  const hpPct=Math.max(0,100*(B.qs.length-B.correct)/B.qs.length);
+  app.innerHTML = `
+  <div class="row" style="margin-bottom:4px">
+    <button class="btn-ghost" onclick="nav('home')">← 逃げる</button>
+    <div class="grow"></div>
+    ${B.mock?`<span class="timer" id="timer">${fmtTime(B.timeLeft)}</span>`:""}
+  </div>
+  <div class="card" style="position:relative;overflow:visible">
+    <div class="enemy-zone">
+      <span class="enemy-emoji" id="enemy">${B.enemy.emoji}</span>
+      <div style="font-weight:800;margin-top:2px">${B.enemy.name}</div>
+      <div class="sub">${B.enemy.flavor}</div>
+      <div class="hpbar"><div id="ehp" style="width:${hpPct}%"></div></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="hearts">${"❤️".repeat(B.playerHp)}${"🖤".repeat(Math.max(0,3-B.playerHp))}</div>
+      <div class="grow combo" id="combo">${B.combo>=2?B.combo+" COMBO!":""}</div>
+      <div class="sub">${B.i+1} / ${B.qs.length}</div>
+    </div>
+    <div class="progress"><div style="width:${100*B.i/B.qs.length}%"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="qcat">${catLabel(q.cat)}</div>
+    <div class="qtext">${q.q.replace(/【(.+?)】/g,'<span class="tgt">$1</span>')}</div>
+    <div id="answers">
+    ${useInput
+      ? `<input type="text" id="inp" placeholder="ひらがなで入力" autocomplete="off" onkeydown="if(event.key==='Enter')submitInput()">
+         <button class="btn-main" onclick="submitInput()">⚡ 攻撃!</button>
+         <button class="btn-ghost" style="width:100%" onclick="giveUpInput()">わからない…(答えを見る)</button>`
+      : shuffledChoices(q).map(ci=>
+         `<button class="choice" onclick="answer(${ci})">${q.c[ci]}</button>`).join("")
+    }
+    </div>
+    <div id="fb"></div>
+  </div>`;
+  if(useInput){ const el=document.getElementById("inp"); if(el) el.focus(); }
+}
+/* 選択肢の表示順をシャッフル(正解位置の偏り防止)。バトルごとに並び直す。
+   熟語の構成はア〜オの並びを固定 */
+function shuffledChoices(q){
+  if(q.cat==="kousei") return q.c.map((_,i)=>i);
+  B.orders = B.orders||{};
+  if(!B.orders[q.id]) B.orders[q.id] = shuffle(q.c.map((_,i)=>i));
+  return B.orders[q.id];
+}
+function normalizeKana(s){
+  return (s||"").trim()
+    .replace(/[ァ-ヶ]/g, ch=>String.fromCharCode(ch.charCodeAt(0)-0x60))
+    .replace(/\s/g,"");
+}
+function submitInput(){
+  if(B.answered) return;
+  const v=normalizeKana(document.getElementById("inp").value);
+  if(!v) return;
+  judge(v===normalizeKana(B.qs[B.i].ans), v);
+}
+function giveUpInput(){ if(!B.answered) judge(false, "(無回答)"); }
+function answer(ci){
+  if(B.answered) return;
+  const q=B.qs[B.i];
+  judge(ci===q.a, ci);
+}
+
+function judge(ok, given){
+  B.answered=true;
+  const q=B.qs[B.i];
+  const st=S.catStats[q.cat]=S.catStats[q.cat]||{ok:0,ng:0};
+  S.totalAnswered++;
+  const enemy=document.getElementById("enemy");
+  if(ok){
+    B.correct++; B.combo++; B.maxCombo=Math.max(B.maxCombo,B.combo);
+    S.totalCorrect++; st.ok++;
+    if(q.input && S.inputMode) S.inputCorrect++;
+    srsCorrect(q.id);
+    const crit=B.combo>=3;
+    let xp = B.mock?15:10;
+    xp += Math.min(10, 2*(B.combo-1));
+    if(q.input && S.inputMode) xp=Math.round(xp*1.5);
+    B.xpGain+=xp;
+    crit?sfx.crit():sfx.ok();
+    if(enemy){
+      enemy.classList.add("hit"); setTimeout(()=>enemy.classList.remove("hit"),200);
+      const d=document.createElement("span"); d.className="dmg";
+      d.textContent=crit?"CRITICAL!":"+"+xp+" XP";
+      d.style.left=(40+Math.random()*30)+"%"; d.style.top="30px";
+      enemy.parentElement.appendChild(d);
+    }
+    document.getElementById("ehp").style.width=Math.max(0,100*(B.qs.length-B.correct)/B.qs.length)+"%";
+    showFb(true, q, xp, crit);
+  }else{
+    B.wrong++; B.combo=0; st.ng++;
+    B.wrongList.push(q);
+    srsWrong(q.id);
+    if(!B.mock) B.playerHp--;
+    sfx.ng();
+    if(enemy){ enemy.classList.add("attack"); setTimeout(()=>enemy.classList.remove("attack"),250); }
+    showFb(false, q, 0, false);
+  }
+  save();
+}
+function correctText(q){ return q.input ? q.ans+"("+q.c[q.a]+")" : q.c[q.a]; }
+function showFb(ok,q,xp,crit){
+  const last = (B.i+1>=B.qs.length) || (!B.mock && B.playerHp<=0 && !ok);
+  document.getElementById("fb").innerHTML = `
+    <div class="feedback ${ok?"ok":"ng"}">
+      <b>${ok?(crit?"🔥 会心の一撃! +"+xp+"XP":"⚔️ 攻撃ヒット! +"+xp+"XP"):"💢 敵の反撃を受けた!"}</b><br>
+      ${ok?"":"正解: <b>"+ (q.input? q.ans : q.c[q.a]) +"</b><br>"}
+      ${q.exp}
+    </div>
+    <button class="btn-main" onclick="next()">${last?"結果を見る":"つぎへ ▶"}</button>`;
+  /* 選択肢に正誤の色をつける */
+  document.querySelectorAll(".choice").forEach((el)=>{
+    const txt=el.textContent;
+    if(txt===q.c[q.a]) el.classList.add("correct");
+    else if(!ok) el.classList.add("dim");
+    el.disabled=true;
+  });
+}
+function next(){
+  B.answered=false;
+  if((!B.mock && B.playerHp<=0) || B.i+1>=B.qs.length){ endBattle(); return; }
+  B.i++;
+  render();
+}
+
+/* ---------- バトル終了 ---------- */
+function endBattle(){
+  stopTimer();
+  if(B.done){ screen="result"; render(); return; }  /* 二重呼び出し防止 */
+  B.done=true;
+  const rate = B.qs.length? B.correct/B.qs.length : 0;
+  if(B.mock){
+    B.win = rate>=0.7;
+    if(B.win){ S.bossCleared++; }
+    S.bossBest=Math.max(S.bossBest,B.correct);
+  }else{
+    B.win = B.playerHp>0;
+  }
+  const beforeLv=levelFromXp(S.xp);
+  S.xp+=B.xpGain;
+  const afterLv=levelFromXp(S.xp);
+  bumpStreak();
+  newBadges=[];
+  checkBadges(B);
+  save();
+  B.win?sfx.win():sfx.lose();
+  screen="result"; render();
+  if(afterLv>beforeLv){
+    sfx.levelup();
+    const div=document.createElement("div");
+    div.className="levelup";
+    div.innerHTML=`<div class="lv">LEVEL UP!</div><div class="big gold">Lv.${afterLv} ${titleFor(afterLv)}</div>
+      <button class="btn-main" style="width:200px;margin-top:20px" onclick="this.parentElement.remove()">つづける</button>`;
+    document.body.appendChild(div);
+  }
+}
+
+function renderResult(){
+  const rate=Math.round(100*B.correct/B.qs.length);
+  app.innerHTML = `
+  <div class="card" style="text-align:center">
+    <div style="font-size:56px">${B.win?(B.mock?"👑":"🎉"):"💀"}</div>
+    <h1>${B.win?(B.mock?"魔王討伐!! 合格ライン突破!":"バトル勝利!"):(B.mock?"魔王は強かった…":"力尽きた…")}</h1>
+    <p class="sub" style="margin-top:6px">${B.mock?`本番の合格ラインは正答率70%。今回は <b class="gold">${rate}%</b>!`:B.enemy.name+"とのバトル結果"}</p>
+    <div class="row" style="margin-top:14px;text-align:center">
+      <div class="grow"><div class="big" style="color:var(--ok)">${B.correct}</div><div class="sub">正解</div></div>
+      <div class="grow"><div class="big" style="color:var(--ng)">${B.wrong}</div><div class="sub">ミス</div></div>
+      <div class="grow"><div class="big" style="color:var(--crit)">${B.maxCombo}</div><div class="sub">最大コンボ</div></div>
+      <div class="grow"><div class="big gold">+${B.xpGain}</div><div class="sub">XP</div></div>
+    </div>
+  </div>
+  ${newBadges.length?`<div class="card"><h2>🏅 新バッジ獲得!</h2>${newBadges.map(b=>`<div class="badge"><span class="bemoji">${b.emoji}</span><div><b>${b.name}</b><div class="sub">${b.desc}</div></div></div>`).join("")}</div>`:""}
+  ${B.wrongList.length?`<div class="card">
+    <h2>📝 まちがい直し(ここが伸びしろ!)</h2>
+    <p class="sub">間違えた問題は今日もう一度、そのあと1→3→7→14日後に自動で再出題されるぞ。</p>
+    <table class="result">${B.wrongList.map(q=>`<tr><td>${q.q.replace(/【(.+?)】/g,"<b>$1</b>")}</td><td style="white-space:nowrap"><b class="gold">${q.input?q.ans:q.c[q.a]}</b></td></tr>`).join("")}</table>
+  </div>`:""}
+  <button class="btn-main" onclick="nav('home')">ホームへ戻る</button>
+  ${B.wrongList.length?`<button class="btn-sub" onclick="retryWrong()">😤 まちがえた${B.wrongList.length}問にリベンジ</button>`:""}`;
+}
+function retryWrong(){
+  const qs=shuffle(B.wrongList);
+  B=newBattle(qs);
+  screen="battle"; render();
+}
+
+/* ---------- バッジ ---------- */
+function renderBadges(){
+  app.innerHTML = `
+  <h1 style="margin-bottom:12px">🏅 バッジコレクション <span class="pill">${S.badges.length}/${BADGES.length}</span></h1>
+  ${BADGES.map(b=>`
+    <div class="badge ${S.badges.includes(b.id)?"":"locked"}">
+      <span class="bemoji">${b.emoji}</span>
+      <div><b>${b.name}</b><div class="sub">${b.desc}</div></div>
+    </div>`).join("")}`;
+}
+
+/* ---------- 学習法 ---------- */
+function renderScience(){
+  app.innerHTML = `
+  <h1 style="margin-bottom:12px">🧪 このアプリの学習法</h1>
+  <div class="card">
+    <p class="sub" style="margin-bottom:14px">このゲームの仕組みは、認知科学の研究で効果が確認された学習法をもとに設計されている。「なんとなく」じゃなくて、科学的に強くなれる。</p>
+    <div class="science">
+      <b>① 思い出す練習(検索練習・テスト効果)</b>
+      <p class="sub">教科書を読み直すより、クイズ形式で「思い出す」方が記憶に残ることが実験で示されている(Roediger & Karpicke, 2006)。このアプリが全問クイズなのはそのため。読み問題の「入力モード」はさらに効果が高い本気仕様(XP 1.5倍)。</p>
+    </div>
+    <div class="science">
+      <b>② 間隔をあけた復習(分散学習)</b>
+      <p class="sub">一夜漬けより、時間をあけて復習する方が長期記憶に定着する(エビングハウスの忘却曲線 / Cepeda et al., 2006)。正解した問題は1日→3日→7日→14日と間隔を広げ、忘れかけた最高のタイミングで「今日の特訓」に再登場する。</p>
+    </div>
+    <div class="science">
+      <b>③ まぜて練習(交互練習)</b>
+      <p class="sub">同じ種類の問題を続けるより、種類をまぜた方が実力がつく(Rohrer & Taylor, 2007)。「今日の特訓」で9分野がシャッフルされるのは本番の試験形式とも同じ。</p>
+    </div>
+    <div class="science">
+      <b>④ すぐに答え合わせ(即時フィードバック)</b>
+      <p class="sub">間違えた直後に正解と理由を知ると、誤った記憶が修正されやすい。全問に解説つき。間違えた問題はその日のうちに再挑戦できる。</p>
+    </div>
+    <div class="science">
+      <b>⑤ 毎日ちょっとずつ(習慣化)</b>
+      <p class="sub">ストリーク(連続日数)とレベルは、"毎日少しずつ"を続けるための仕掛け。1日10問でも、分散学習と組み合わせれば一夜漬けよりずっと強い。</p>
+    </div>
+    <p class="sub" style="margin-top:10px">📖 参考: Dunlosky et al. (2013) は主要な学習テクニックを比較し、「検索練習」と「分散学習」を最も効果の高い学習法と評価した。</p>
+  </div>
+  <div class="card">
+    <h2>📋 漢検4級について</h2>
+    <p class="sub">
+      ・対象レベル: 中学校在学程度(約1,300字)<br>
+      ・試験時間: 60分 / 200点満点<br>
+      ・合格ライン: <b class="gold">70%程度(約140点)</b><br>
+      ・出題分野: 読み/書き取り/同音・同訓異字/漢字の識別/熟語の構成/部首/対義語・類義語/送りがな/四字熟語/誤字訂正<br>
+      ・このアプリの「ボス戦」は本番と同じ出題バランス&合格ラインの模擬形式。
+    </p>
+  </div>`;
+}
+
+/* ---------- 設定 ---------- */
+function renderSettings(){
+  app.innerHTML = `
+  <h1 style="margin-bottom:12px">⚙️ 設定</h1>
+  <div class="card">
+    <button class="btn-sub" onclick="S.sound=!S.sound;save();render()">🔊 効果音: <b class="gold">${S.sound?"ON":"OFF"}</b></button>
+    <button class="btn-sub" onclick="S.inputMode=!S.inputMode;save();render()">⌨️ 読み問題の入力モード(ガチ勢用・XP1.5倍): <b class="gold">${S.inputMode?"ON":"OFF"}</b></button>
+    <p class="sub" style="margin-top:10px">入力モードONにすると、読み問題が4択ではなく「ひらがな入力」になる。思い出す負荷が高いぶん、記憶への効果もXPもアップ!</p>
+  </div>
+  <div class="card">
+    <h2>データ</h2>
+    <p class="sub">収録問題数: ${QUESTIONS.length}問(9分野) / セーブはこの端末のブラウザに保存される。</p>
+    <button class="btn-sub" style="color:var(--ng)" onclick="resetData()">🗑️ 冒険の記録をリセット</button>
+  </div>`;
+}
+function resetData(){
+  if(confirm("本当に全データをリセットする? レベル・バッジ・復習記録がすべて消えるぞ!")){
+    try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+    S=defaultSave(); render();
+  }
+}
+
+/* ---------- 起動 ---------- */
+render();
+</script>
+</body>
+</html>
